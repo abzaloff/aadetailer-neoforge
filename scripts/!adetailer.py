@@ -474,6 +474,36 @@ class AfterDetailerScript(scripts.Script):
 
         return width, height
 
+    def get_inpaint_size_for_mask(
+        self,
+        mask: Image.Image,
+        args: ADetailerArgs,
+        *,
+        fallback_width: int,
+        fallback_height: int,
+    ) -> tuple[int, int]:
+        if not args.ad_use_inpaint_width_height:
+            return fallback_width, fallback_height
+
+        bbox = mask.getbbox()
+        if bbox is None:
+            return fallback_width, fallback_height
+
+        w = max(bbox[2] - bbox[0], 1)
+        h = max(bbox[3] - bbox[1], 1)
+
+        scaled_w = max(1, round(w * args.ad_inpaint_scale))
+        scaled_h = max(1, round(h * args.ad_inpaint_scale))
+
+        min_w = args.ad_inpaint_width
+        min_h = args.ad_inpaint_height
+
+        up_scale = max(min_w / scaled_w, min_h / scaled_h, 1.0)
+        target_w = int(round(scaled_w * up_scale))
+        target_h = int(round(scaled_h * up_scale))
+
+        return target_w, target_h
+
     def get_steps(self, p, args: ADetailerArgs) -> int:
         if args.ad_use_steps:
             return args.ad_steps
@@ -891,6 +921,7 @@ class AfterDetailerScript(scripts.Script):
             print(f"mediapipe: {steps} detected.")
 
         p2 = copy(i2i)
+        base_width, base_height = i2i.width, i2i.height
         for j in range(steps):
             p2.image_mask = masks[j]
             p2.init_images[0] = ensure_pil_image(p2.init_images[0], "RGB")
@@ -902,6 +933,13 @@ class AfterDetailerScript(scripts.Script):
             if args.ad_use_autotag:
                 tags = self.get_autotag_tags(p2.init_images[0], p2.image_mask, args)
                 p2.prompt = self.append_tags_to_prompt(p2.prompt, tags)
+
+            p2.width, p2.height = self.get_inpaint_size_for_mask(
+                p2.image_mask,
+                args,
+                fallback_width=base_width,
+                fallback_height=base_height,
+            )
 
             p2.seed = self.get_each_tab_seed(seed, j)
             p2.subseed = self.get_each_tab_seed(subseed, j)

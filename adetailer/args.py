@@ -80,8 +80,9 @@ class ADetailerArgs(BaseModel, extra=Extra.forbid):
     ad_inpaint_only_masked: bool = True
     ad_inpaint_only_masked_padding: NonNegativeInt = 32
     ad_use_inpaint_width_height: bool = False
-    ad_inpaint_width: PositiveInt = 512
-    ad_inpaint_height: PositiveInt = 512
+    ad_inpaint_width: PositiveInt = 512  # minimum width
+    ad_inpaint_height: PositiveInt = 512  # minimum height
+    ad_inpaint_scale: confloat(ge=0.1, le=8.0) = 1.0
     ad_use_steps: bool = False
     ad_steps: PositiveInt = 28
     ad_use_cfg_scale: bool = False
@@ -159,10 +160,12 @@ class ADetailerArgs(BaseModel, extra=Extra.forbid):
             "ADetailer use inpaint width height",
             [
                 "ADetailer use inpaint width height",
-                "ADetailer inpaint width",
-                "ADetailer inpaint height",
+                "ADetailer min inpaint width",
+                "ADetailer min inpaint height",
+                "ADetailer inpaint scale",
             ],
         )
+        ppop("ADetailer inpaint scale", cond=1.0)
         ppop(
             "ADetailer use separate steps",
             ["ADetailer use separate steps", "ADetailer steps"],
@@ -255,8 +258,9 @@ _all_args = [
     ("ad_inpaint_only_masked", "ADetailer inpaint only masked"),
     ("ad_inpaint_only_masked_padding", "ADetailer inpaint padding"),
     ("ad_use_inpaint_width_height", "ADetailer use inpaint width height"),
-    ("ad_inpaint_width", "ADetailer inpaint width"),
-    ("ad_inpaint_height", "ADetailer inpaint height"),
+    ("ad_inpaint_width", "ADetailer min inpaint width"),
+    ("ad_inpaint_height", "ADetailer min inpaint height"),
+    ("ad_inpaint_scale", "ADetailer inpaint scale"),
     ("ad_use_steps", "ADetailer use separate steps"),
     ("ad_steps", "ADetailer steps"),
     ("ad_use_cfg_scale", "ADetailer use separate CFG scale"),

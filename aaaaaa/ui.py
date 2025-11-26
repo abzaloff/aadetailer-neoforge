@@ -533,7 +533,7 @@ def inpainting(w: Widgets, n: int, is_img2img: bool, webui_info: WebuiInfo):
                 )
 
                 w.ad_inpaint_width = gr.Slider(
-                    label="inpaint width" + suffix(n),
+                    label="Minimum inpaint width" + suffix(n),
                     minimum=64,
                     maximum=2048,
                     step=4,
@@ -543,7 +543,7 @@ def inpainting(w: Widgets, n: int, is_img2img: bool, webui_info: WebuiInfo):
                 )
 
                 w.ad_inpaint_height = gr.Slider(
-                    label="inpaint height" + suffix(n),
+                    label="Minimum inpaint height" + suffix(n),
                     minimum=64,
                     maximum=2048,
                     step=4,
@@ -552,10 +552,27 @@ def inpainting(w: Widgets, n: int, is_img2img: bool, webui_info: WebuiInfo):
                     elem_id=eid("ad_inpaint_height"),
                 )
 
+                w.ad_inpaint_scale = gr.Slider(
+                    label="Inpaint scale" + suffix(n),
+                    minimum=0.1,
+                    maximum=8.0,
+                    step=0.05,
+                    value=1.0,
+                    visible=True,
+                    elem_id=eid("ad_inpaint_scale"),
+                    info="Multiply detected crop size by this factor before enforcing minimums.",
+                )
+
                 w.ad_use_inpaint_width_height.change(
                     lambda value: (gr_interactive(value), gr_interactive(value)),
                     inputs=w.ad_use_inpaint_width_height,
                     outputs=[w.ad_inpaint_width, w.ad_inpaint_height],
+                    queue=False,
+                )
+                w.ad_use_inpaint_width_height.change(
+                    gr_interactive,
+                    inputs=w.ad_use_inpaint_width_height,
+                    outputs=w.ad_inpaint_scale,
                     queue=False,
                 )
 
