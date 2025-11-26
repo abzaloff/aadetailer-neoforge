@@ -81,10 +81,11 @@ def on_widget_change(state: dict, value: Any, *, attr: str):
 
 
 def on_generate_click(state: dict, *values: Any):
+    new_state = {}
     for attr, value in zip(ALL_ARGS.attrs, values):
-        state[attr] = value
-    state["is_api"] = ()
-    return state
+        new_state[attr] = value
+    new_state["is_api"] = ()
+    return new_state
 
 
 def on_ad_model_update(model: str):
@@ -344,6 +345,16 @@ def one_ui_group(n: int, is_img2img: bool, webui_info: WebuiInfo):
                 queue=False,
             )
 
+            initial_autotag_enabled = bool(w.ad_use_autotag.value)
+            for comp in (
+                w.ad_autotag_hide_rating,
+                w.ad_autotag_general_thresh,
+                w.ad_autotag_character_thresh,
+                w.ad_autotag_character_first,
+                w.ad_autotag_remove_underscore,
+            ):
+                comp.interactive = initial_autotag_enabled
+
     with gr.Group():
         with gr.Accordion(
             "Detection", open=False, elem_id=eid("ad_detection_accordion")
@@ -575,6 +586,15 @@ def inpainting(w: Widgets, n: int, is_img2img: bool, webui_info: WebuiInfo):
                     outputs=w.ad_inpaint_scale,
                     queue=False,
                 )
+
+                if w.ad_use_inpaint_width_height.value:
+                    w.ad_inpaint_width.interactive = True
+                    w.ad_inpaint_height.interactive = True
+                    w.ad_inpaint_scale.interactive = True
+                else:
+                    w.ad_inpaint_width.interactive = False
+                    w.ad_inpaint_height.interactive = False
+                    w.ad_inpaint_scale.interactive = False
 
         with gr.Row():
             with gr.Column(variant="compact"):
