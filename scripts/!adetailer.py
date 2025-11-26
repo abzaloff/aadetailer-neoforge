@@ -226,6 +226,14 @@ class AfterDetailerScript(scripts.Script):
         p.width = 128
         p.height = 128
 
+    @staticmethod
+    def is_hires_pass(p, *, allow_enable_hr: bool = False) -> bool:
+        if getattr(p, "_ad_is_hr_pass", False) or getattr(p, "is_hr_pass", False):
+            return True
+        if allow_enable_hr and getattr(p, "enable_hr", False):
+            return True
+        return False
+
     def get_args(self, p, *args_) -> list[ADetailerArgs]:
         """
         `args_` is at least 1 in length by `is_ad_enabled` immediately above
@@ -675,6 +683,8 @@ class AfterDetailerScript(scripts.Script):
         if getattr(p, "_ad_disabled", False):
             return
 
+        p._ad_is_hr_pass = False
+
         if is_img2img_inpaint(p) and is_all_black(self.get_image_mask(p)):
             p._ad_disabled = True
             msg = (
@@ -701,8 +711,23 @@ class AfterDetailerScript(scripts.Script):
             arg_list[0].ad_prompt = replaced_positive_prompt[0]
             arg_list[0].ad_negative_prompt = replaced_negative_prompt[0]
 
-        extra_params = self.extra_params(arg_list)
+        applicable_args = [
+            arg
+            for arg in arg_list
+            if not (arg.ad_hires_fix_only and not self.is_hires_pass(p, allow_enable_hr=True))
+        ]
+
+        if not applicable_args:
+            p._ad_disabled = True
+            return
+
+        extra_params = self.extra_params(applicable_args)
         p.extra_generation_params.update(extra_params)
+
+    def before_hr(self, p, *args_):
+        if getattr(p, "_ad_disabled", False):
+            return
+        p._ad_is_hr_pass = True
 
     def _postprocess_image_inner(
         self, p, pp, args: ADetailerArgs, *, n: int = 0
@@ -814,6 +839,8 @@ class AfterDetailerScript(scripts.Script):
         with CNHijackRestore(), pause_total_tqdm(), cn_allow_script_control():
             for n, args in enumerate(arg_list):
                 if args.need_skip():
+                    continue
+                if args.ad_hires_fix_only and not self.is_hires_pass(p):
                     continue
                 is_processed |= self._postprocess_image_inner(p, pp, args, n=n)
 

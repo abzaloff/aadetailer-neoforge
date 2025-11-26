@@ -56,6 +56,7 @@ class ADetailerArgs(BaseModel, extra=Extra.forbid):
     ad_model: str = "None"
     ad_model_classes: str = ""
     ad_tab_enable: bool = True
+    ad_hires_fix_only: bool = False
     ad_prompt: str = ""
     ad_negative_prompt: str = ""
     ad_confidence: confloat(ge=0.0, le=1.0) = 0.3
@@ -130,6 +131,7 @@ class ADetailerArgs(BaseModel, extra=Extra.forbid):
         ppop("ADetailer prompt")
         ppop("ADetailer negative prompt")
         p.pop("ADetailer tab enable", None)  # always pop
+        ppop("ADetailer hires fix only")
         ppop("ADetailer mask only top k largest", cond=0)
         ppop("ADetailer mask min ratio", cond=0.0)
         ppop("ADetailer mask max ratio", cond=1.0)
@@ -213,6 +215,7 @@ _all_args = [
     ("ad_model", "ADetailer model"),
     ("ad_model_classes", "ADetailer model classes"),
     ("ad_tab_enable", "ADetailer tab enable"),
+    ("ad_hires_fix_only", "ADetailer hires fix only"),
     ("ad_prompt", "ADetailer prompt"),
     ("ad_negative_prompt", "ADetailer negative prompt"),
     ("ad_confidence", "ADetailer confidence"),
@@ -274,5 +277,10 @@ _script_default = (
 )
 SCRIPT_DEFAULT = ",".join(sorted(_script_default))
 
-_builtin_script = ("soft_inpainting", "hypertile_script")
+_builtin_script = (
+    "advanced_model_sampling_script",
+    "advanced_model_sampling_script_backported",
+    "hypertile_script",
+    "soft_inpainting",
+)
 BUILTIN_SCRIPT = ",".join(sorted(_builtin_script))

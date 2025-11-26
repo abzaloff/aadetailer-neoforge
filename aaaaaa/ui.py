@@ -183,6 +183,13 @@ def one_ui_group(n: int, is_img2img: bool, webui_info: WebuiInfo):
                 visible=True,
                 elem_id=eid("ad_tab_enable"),
             )
+            w.ad_hires_fix_only = gr.Checkbox(
+                label="Apply only on hires.fix" + suffix(n),
+                value=False,
+                visible=True,
+                elem_id=eid("ad_hires_fix_only"),
+                info="Skip this tab on the base pass and run only during hires.fix.",
+            )
 
         with gr.Row():
             w.ad_model = gr.Dropdown(
