@@ -3,6 +3,7 @@ A small fork with new features and modifications, verified to work with up-to-da
 
 Current additional features:  
 - Automatically include loras
+  If loras are present in prompt, they will be automatically added. If their name include main trigger, it can be included too. Schema for trigger in name: <lora:lora name (trigger) blah blah:1> - basically what is inside () is considered trigger.
 - Autotag before inpaint (Autotags crop area, so inpaint is stable, and doesn't require re-prompting each gen)
 - Reworked resolution, now based on scaling. (Define a scale(multiplier) for resolution over base, so it's always bigger than original)
 
