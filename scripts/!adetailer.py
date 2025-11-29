@@ -1019,6 +1019,7 @@ class AfterDetailerScript(scripts.Script):
 
         p2 = copy(i2i)
         base_width, base_height = i2i.width, i2i.height
+        seed, subseed = self.get_seed(p)
         for j in range(steps):
             p2.image_mask = masks[j]
             p2.init_images[0] = ensure_pil_image(p2.init_images[0], "RGB")
