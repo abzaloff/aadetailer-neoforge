@@ -3,6 +3,7 @@ A small fork with new features and modifications, verified to work with up-to-da
 
 Current additional features:  
 - Automatically include loras
+  If loras are present in prompt, they will be automatically added. If their name include main trigger, it can be included too. Schema for trigger in name: <lora:lora name (trigger) blah blah:1> - basically what is inside () is considered trigger.
 - Autotag before inpaint (Autotags crop area, so inpaint is stable, and doesn't require re-prompting each gen)
 - Reworked resolution, now based on scaling. (Define a scale(multiplier) for resolution over base, so it's always bigger than original)
 
@@ -17,19 +18,7 @@ ADetailer is an extension for the stable diffusion webui that does automatic mas
 
 You can install it directly from the Extensions tab.
 
-![image](https://i.imgur.com/qaXtoI6.png)
-
-Or
-
-(from Mikubill/sd-webui-controlnet)
-
-1. Open "Extensions" tab.
-2. Open "Install from URL" tab in the tab.
-3. Enter `https://github.com/Bing-su/adetailer.git` to "URL for extension's git repository".
-4. Press "Install" button.
-5. Wait 5 seconds, and you will see the message "Installed into stable-diffusion-webui\extensions\adetailer. Use Installed tab to restart".
-6. Go to "Installed" tab, click "Check for updates", and then click "Apply and restart UI". (The next time you can also use this method to update extensions.)
-7. Completely restart A1111 webui including your terminal. (If you do not know what is a "terminal", you can reboot your computer: turn your computer off and turn it on again.)
+download this repo and put it in your expensions(replace original adetailer)
 
 ## Options
 
@@ -39,6 +28,13 @@ Or
 | ADetailer model classes           | Comma separated class names to detect. only available when using YOLO World models | If blank, use default values.<br/>default = [COCO 80 classes](https://github.com/ultralytics/ultralytics/blob/main/ultralytics/cfg/datasets/coco.yaml) |
 | ADetailer prompt, negative prompt | Prompts and negative prompts to apply                                              | If left blank, it will use the same as the input.                                                                                                      |
 | Skip img2img                      | Skip img2img. In practice, this works by changing the step count of img2img to 1.  | img2img only                                                                                                                                           |
+| Apply only on hires.fix           | Skips lowres images, saving a lot of time. Applies only on hires pass.             |                                                                                                                                                        |
+| Append main prompt LoRAs          | Append loras to adetailer prompt automatically.                                    |                                                                                                                                                        |
+| Append LoRA triggers              | Also add triggers, if any are present in lora name.                                | Loras must follow this naming convention for trigger to work: <lora:lora name (trigger) blah blah:1>                                                   |
+
+| Autotagging                            |                                                                                              | 
+| ------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Enable Autotagging | Extend prompt by adding tags detected by WDv3 large tagger.| 
 
 | Detection                            |                                                                                              |              |
 | ------------------------------------ | -------------------------------------------------------------------------------------------- | ------------ |
@@ -94,7 +90,7 @@ API request example: [wiki/REST-API](https://github.com/Bing-su/adetailer/wiki/R
 | mediapipe_face_short  | realistic face        | -                             | -                             |
 | mediapipe_face_mesh   | realistic face        | -                             | -                             |
 
-The YOLO models can be found on huggingface [Bingsu/adetailer](https://huggingface.co/Bingsu/adetailer).
+The YOLO models can be found on huggingface [Bingsu/adetailer](https://huggingface.co/Bingsu/adetailer) and [Anzhc/Anzhcs_YOLOs](https://huggingface.co/Anzhc/Anzhcs_YOLOs)
 
 For a detailed description of the YOLO8 model, see: https://docs.ultralytics.com/models/yolov8/#overview
 
@@ -116,7 +112,7 @@ ADetailer works in three simple steps.
 
 ## Development
 
-ADetailer is developed and tested using the stable-diffusion 1.5 model, for the latest version of [AUTOMATIC1111/stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui) repository only.
+AADetailer is developed and tested using the SDXL model, for the latest version of [ReForge](https://github.com/Panchovix/stable-diffusion-webui-reForge) repository only.
 
 ## License
 
