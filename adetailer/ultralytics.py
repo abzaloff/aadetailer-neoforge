@@ -9,6 +9,7 @@ from torchvision.transforms.functional import to_pil_image
 
 from adetailer import PredictOutput
 from adetailer.common import create_mask_from_bbox
+import numpy as np
 
 if TYPE_CHECKING:
     import torch
@@ -67,5 +68,5 @@ def mask_to_pil(masks: torch.Tensor, shape: tuple[int, int]) -> list[Image.Image
     shape: tuple[int, int]
         (W, H) of the original image
     """
-    n = masks.shape[0]
-    return [to_pil_image(masks[i], mode="L").resize(shape) for i in range(n)]
+    masks_uint8 = (masks.cpu().numpy() * 255).astype(np.uint8)
+    return [to_pil_image(mask, mode="L").resize(shape) for mask in masks_uint8]
