@@ -1,6 +1,8 @@
 # AADetailer-ReForge
 A small fork with new features and modifications, verified to work with up-to-date ReForge only. (It can potentially work with other webUIs, but i am not promising to maintain them for anything other than ReForge)  
 
+Fix for newer Ultralytics included.
+
 Current additional features:  
 - Automatically include loras
   If loras are present in prompt, they will be automatically added. If their name include main trigger, it can be included too. Schema for trigger in name: <lora:lora name (trigger) blah blah:1> - basically what is inside () is considered trigger.
