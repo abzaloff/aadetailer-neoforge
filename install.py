@@ -44,10 +44,17 @@ def run_pip(*args):
 
 
 def install():
+    if sys.version_info >= (3, 13):
+        mediapipe_min = "0.10.30"
+        mediapipe_max = "0.10.32"
+    else:
+        mediapipe_min = "0.10.13"
+        mediapipe_max = "0.10.15"
+
     deps = [
         # requirements
         ("ultralytics", "8.3.75", None),
-        ("mediapipe", "0.10.13", "0.10.15"),
+        ("mediapipe", mediapipe_min, mediapipe_max),
         ("rich", "13.0.0", None),
     ]
 
