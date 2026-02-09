@@ -1,5 +1,5 @@
-# AADetailer-ReForge
-A small fork with new features and modifications, verified to work with up-to-date ReForge only. (It can potentially work with other webUIs, but i am not promising to maintain them for anything other than ReForge)  
+# AADetailer Forge Neo Python 3.13
+A small fork with new features and modifications, verified to work with up-to-date Forge Neo Python 3.13 only. (It can potentially work with other webUIs, but i am not promising to maintain them for anything other than Forge Neo Python 3.13)  
 
 Fix for newer Ultralytics included.
 
