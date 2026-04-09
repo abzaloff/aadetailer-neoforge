@@ -1054,6 +1054,10 @@ class AfterDetailerScript(scripts.Script):
             if args.ad_use_autotag:
                 tags = self.get_autotag_tags(p2.init_images[0], p2.image_mask, args)
                 p2.prompt = self.append_tags_to_prompt(p2.prompt, tags)
+                if tags:
+                    print("[-] ADetailer: autotag applied.")
+                else:
+                    print("[-] ADetailer: autotag not applied (no tags).")
 
             p2.width, p2.height = self.get_inpaint_size_for_mask(
                 p2.image_mask,
