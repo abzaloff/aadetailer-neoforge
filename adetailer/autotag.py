@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+import os
+from pathlib import Path
 from PIL import Image
 
 from adetailer.common import ensure_pil_image
@@ -9,6 +11,8 @@ from adetailer.common import ensure_pil_image
 VIT_LARGE_MODEL_REPO = "SmilingWolf/wd-vit-large-tagger-v3"
 MODEL_FILENAME = "model.onnx"
 LABEL_FILENAME = "selected_tags.csv"
+AUTOTAG_MODEL_DIR_ENV = "AD_AUTOTAG_MODEL_DIR"
+AUTOTAG_OFFLINE_ENV = "AD_AUTOTAG_OFFLINE"
 
 
 class AutoTaggerError(RuntimeError):
@@ -21,6 +25,65 @@ class LabelData:
     rating: list[int]
     general: list[int]
     character: list[int]
+
+
+def _default_model_dir() -> Path:
+    try:
+        from modules import paths
+    except Exception:
+        return Path.cwd() / "models" / "adetailer" / "autotag"
+    return Path(paths.models_path) / "adetailer" / "autotag"
+
+
+def _resolve_model_dir() -> Path:
+    env_dir = os.getenv(AUTOTAG_MODEL_DIR_ENV, "").strip()
+    model_dir = Path(env_dir) if env_dir else _default_model_dir()
+    model_dir.mkdir(parents=True, exist_ok=True)
+    return model_dir
+
+
+def _local_model_files(model_dir: Path) -> tuple[Path, Path]:
+    return (model_dir / LABEL_FILENAME, model_dir / MODEL_FILENAME)
+
+
+def _has_local_model_files(model_dir: Path) -> bool:
+    csv_path, model_path = _local_model_files(model_dir)
+    return csv_path.exists() and model_path.exists()
+
+
+def _download_to_local(model_repo: str, model_dir: Path) -> tuple[str, str]:
+    from huggingface_hub import hf_hub_download
+
+    download_kwargs = {
+        "repo_id": model_repo,
+        "local_dir": str(model_dir),
+        "local_dir_use_symlinks": False,
+        "etag_timeout": 5,
+    }
+
+    errors: list[str] = []
+    endpoints = [None, "https://hf-mirror.com"]
+    for endpoint in endpoints:
+        try:
+            if endpoint is None:
+                csv_path = hf_hub_download(filename=LABEL_FILENAME, **download_kwargs)
+                model_path = hf_hub_download(filename=MODEL_FILENAME, **download_kwargs)
+            else:
+                csv_path = hf_hub_download(
+                    filename=LABEL_FILENAME, endpoint=endpoint, **download_kwargs
+                )
+                model_path = hf_hub_download(
+                    filename=MODEL_FILENAME, endpoint=endpoint, **download_kwargs
+                )
+            return csv_path, model_path
+        except Exception as e:  # noqa: BLE001
+            errors.append(str(e))
+
+    message = "; ".join(errors[-2:]) if errors else "unknown download error"
+    raise AutoTaggerError(
+        "ADetailer autotagging failed to download model files. "
+        f"Last errors: {message}"
+    )
 
 
 def prepare_image(image: Image.Image, target_size: int) -> np.ndarray:
@@ -40,16 +103,27 @@ def prepare_image(image: Image.Image, target_size: int) -> np.ndarray:
 
 
 def _download_model(model_repo: str):
-    try:
-        from huggingface_hub import hf_hub_download
-    except Exception as e:  # noqa: BLE001
-        raise AutoTaggerError(
-            "huggingface_hub is required for ADetailer autotagging but is not installed"
-        ) from e
+    model_dir = _resolve_model_dir()
+    csv_file, model_file = _local_model_files(model_dir)
 
-    csv_path = hf_hub_download(model_repo, LABEL_FILENAME)
-    model_path = hf_hub_download(model_repo, MODEL_FILENAME)
-    return csv_path, model_path
+    # Primary behavior: once files are downloaded, always use local copies.
+    if _has_local_model_files(model_dir):
+        return str(csv_file), str(model_file)
+
+    if os.getenv(AUTOTAG_OFFLINE_ENV, "").strip().lower() in {"1", "true", "yes"}:
+        raise AutoTaggerError(
+            "ADetailer autotagging is in offline mode and local files are missing. "
+            f"Put {LABEL_FILENAME!r} and {MODEL_FILENAME!r} into {model_dir!s} "
+            f"or disable {AUTOTAG_OFFLINE_ENV}=1."
+        )
+
+    try:
+        return _download_to_local(model_repo, model_dir)
+    except ImportError as e:
+        raise AutoTaggerError(
+            "huggingface_hub is required for first-time ADetailer autotag model download "
+            "but is not installed"
+        ) from e
 
 
 def _load_model_and_tags(model_repo: str):
