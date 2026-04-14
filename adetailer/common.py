@@ -27,6 +27,11 @@ class PredictOutput(Generic[T]):
 
 
 def hf_download(file: str, repo_id: str = REPO_ID, check_remote: bool = True) -> str:
+    # Always prefer local HF cache first to avoid network HEAD calls
+    # when the model is already available locally.
+    with suppress(Exception):
+        return hf_hub_download(repo_id, file, local_files_only=True)
+
     if check_remote:
         with suppress(Exception):
             return hf_hub_download(repo_id, file, etag_timeout=1)
@@ -35,9 +40,6 @@ def hf_download(file: str, repo_id: str = REPO_ID, check_remote: bool = True) ->
             return hf_hub_download(
                 repo_id, file, etag_timeout=1, endpoint="https://hf-mirror.com"
             )
-
-    with suppress(Exception):
-        return hf_hub_download(repo_id, file, local_files_only=True)
 
     if check_remote:
         msg = f"[-] ADetailer: Failed to load model {file!r} from huggingface"
@@ -96,7 +98,16 @@ def get_models(
         "person_yolov8s-seg.pt",
         "yolov8x-worldv2.pt",
     ]
-    models.update(download_models(*to_download, check_remote=huggingface))
+
+    # Prefer local files first, then fetch only missing built-in models.
+    local_by_name = {path.name: str(path) for path in model_paths}
+    for name in to_download:
+        if name in local_by_name:
+            models[name] = local_by_name[name]
+
+    missing = [name for name in to_download if name not in models]
+    if missing:
+        models.update(download_models(*missing, check_remote=huggingface))
 
     models.update(
         {
