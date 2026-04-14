@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
+import shutil
 from typing import Any, Generic, Optional, TypeVar
 
 from huggingface_hub import hf_hub_download
@@ -26,19 +27,48 @@ class PredictOutput(Generic[T]):
     preview: Optional[Image.Image] = None
 
 
-def hf_download(file: str, repo_id: str = REPO_ID, check_remote: bool = True) -> str:
-    # Always prefer local HF cache first to avoid network HEAD calls
-    # when the model is already available locally.
+def hf_download(
+    file: str,
+    repo_id: str = REPO_ID,
+    check_remote: bool = True,
+    local_dir: str | os.PathLike[str] | None = None,
+) -> str:
+    target_file: Path | None = None
+    if local_dir is not None:
+        target_dir = Path(local_dir)
+        safe_mkdir(target_dir)
+        target_file = target_dir / file
+        if target_file.exists():
+            return str(target_file)
+
+    # Prefer local HF cache first. If found and local_dir is provided, copy into
+    # local model directory so next startup doesn't need HF cache lookup at all.
     with suppress(Exception):
-        return hf_hub_download(repo_id, file, local_files_only=True)
+        cached = hf_hub_download(repo_id, file, local_files_only=True)
+        if target_file is not None:
+            if not target_file.exists():
+                shutil.copy2(cached, target_file)
+            return str(target_file)
+        return cached
 
     if check_remote:
         with suppress(Exception):
-            return hf_hub_download(repo_id, file, etag_timeout=1)
+            return hf_hub_download(
+                repo_id,
+                file,
+                etag_timeout=1,
+                local_dir=str(local_dir) if local_dir is not None else None,
+                local_dir_use_symlinks=False,
+            )
 
         with suppress(Exception):
             return hf_hub_download(
-                repo_id, file, etag_timeout=1, endpoint="https://hf-mirror.com"
+                repo_id,
+                file,
+                etag_timeout=1,
+                endpoint="https://hf-mirror.com",
+                local_dir=str(local_dir) if local_dir is not None else None,
+                local_dir_use_symlinks=False,
             )
 
     if check_remote:
@@ -59,7 +89,11 @@ def scan_model_dir(path: Path) -> list[Path]:
     return [p for p in path.rglob("*") if p.is_file() and p.suffix == ".pt"]
 
 
-def download_models(*names: str, check_remote: bool = True) -> dict[str, str]:
+def download_models(
+    *names: str,
+    check_remote: bool = True,
+    local_dir: str | os.PathLike[str] | None = None,
+) -> dict[str, str]:
     models = OrderedDict()
     with ThreadPoolExecutor() as executor:
         for name in names:
@@ -69,12 +103,14 @@ def download_models(*names: str, check_remote: bool = True) -> dict[str, str]:
                     name,
                     repo_id="Bingsu/yolo-world-mirror",
                     check_remote=check_remote,
+                    local_dir=local_dir,
                 )
             else:
                 models[name] = executor.submit(
                     hf_download,
                     name,
                     check_remote=check_remote,
+                    local_dir=local_dir,
                 )
     return {name: future.result() for name, future in models.items()}
 
@@ -83,11 +119,15 @@ def get_models(
     *dirs: str | os.PathLike[str], huggingface: bool = True
 ) -> OrderedDict[str, str]:
     model_paths = []
+    primary_dir: Path | None = None
 
     for dir_ in dirs:
         if not dir_:
             continue
-        model_paths.extend(scan_model_dir(Path(dir_)))
+        dir_path = Path(dir_)
+        if primary_dir is None:
+            primary_dir = dir_path
+        model_paths.extend(scan_model_dir(dir_path))
 
     models = OrderedDict()
     to_download = [
@@ -107,7 +147,13 @@ def get_models(
 
     missing = [name for name in to_download if name not in models]
     if missing:
-        models.update(download_models(*missing, check_remote=huggingface))
+        models.update(
+            download_models(
+                *missing,
+                check_remote=huggingface,
+                local_dir=primary_dir,
+            )
+        )
 
     models.update(
         {
