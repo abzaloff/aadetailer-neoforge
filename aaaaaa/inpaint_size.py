@@ -1,4 +1,5 @@
 """Align ADetailer's internal inpaint size to the active Forge VAE."""
+
 from __future__ import annotations
 
 from math import lcm
@@ -14,20 +15,23 @@ def vae_spatial_alignment(model) -> tuple[int, int] | None:
         height, width = ratio[-2:]
     else:
         width = height = ratio
-    if all(isinstance(v, Integral) and not isinstance(v, bool) and v > 0 for v in (width, height)):
+    if all(
+        isinstance(v, Integral) and not isinstance(v, bool) and v > 0
+        for v in (width, height)
+    ):
         return int(width), int(height)
     return None
 
 
 def align_inpaint_size(
-    width: int,
-    height: int,
+    size: tuple[int, int],
     model,
     *,
     image_size: tuple[int, int] | None = None,
     separate_size: bool = False,
     model_override: bool = False,
 ) -> tuple[int, int]:
+    width, height = size
     alignment = vae_spatial_alignment(model)
     if alignment is None:
         return width, height
@@ -39,11 +43,16 @@ def align_inpaint_size(
     def align(value: int, multiple: int, actual: int | None) -> int:
         if value > 0 and value % multiple == 0:
             return value
-        if not separate_size and actual is not None:
-            # Reuse the real generated size if Forge rounded this axis.
-            # Do not replace a deliberately different Hires/skip-img2img size.
-            if actual > 0 and actual % multiple == 0 and abs(actual - value) < multiple:
-                return actual
+        # Reuse the real generated size if Forge rounded this axis.
+        # Do not replace a deliberately different Hires/skip-img2img size.
+        if (
+            not separate_size
+            and actual is not None
+            and actual > 0
+            and actual % multiple == 0
+            and abs(actual - value) < multiple
+        ):
+            return actual
         if separate_size:
             # Separate width/height settings are minimums for mask scaling.
             return max(multiple, ((value + multiple - 1) // multiple) * multiple)

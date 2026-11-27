@@ -1,8 +1,8 @@
 """Temporarily use normal inpainting rather than ANIMA reference editing."""
+
 from __future__ import annotations
 
 from contextlib import contextmanager
-
 
 _KEY = "anima_do_reference"
 _MISSING = object()

@@ -1078,7 +1078,7 @@ class AfterDetailerScript(scripts.Script):
             # active VAE's spatial requirements after all mask-size calculations.
             requested_size = (p2.width, p2.height)
             p2.width, p2.height = align_inpaint_size(
-                *requested_size,
+                requested_size,
                 p2.sd_model,
                 image_size=p2.init_images[0].size,
                 separate_size=args.ad_use_inpaint_width_height,
