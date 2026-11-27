@@ -15,6 +15,7 @@ from PIL import Image, ImageChops
 from rich import print  # noqa: A004  Shadowing built-in 'print'
 
 import modules
+from aaaaaa.anima_reference import suspend_anima_reference
 from aaaaaa.conditional import create_binary_mask, schedulers
 from aaaaaa.helper import (
     PPImage,
@@ -23,6 +24,7 @@ from aaaaaa.helper import (
     pause_total_tqdm,
     preserve_prompts,
 )
+from aaaaaa.inpaint_size import align_inpaint_size
 from aaaaaa.p_method import (
     get_i,
     is_img2img_inpaint,
@@ -1071,11 +1073,41 @@ class AfterDetailerScript(scripts.Script):
                 fallback_height=base_height,
             )
 
+            # The generated PIL image may already be aligned by Forge, while
+            # p.width/p.height still hold the original UI values. Apply the
+            # active VAE's spatial requirements after all mask-size calculations.
+            requested_size = (p2.width, p2.height)
+            p2.width, p2.height = align_inpaint_size(
+                *requested_size,
+                p2.sd_model,
+                image_size=p2.init_images[0].size,
+                separate_size=args.ad_use_inpaint_width_height,
+                model_override=any(
+                    key in p2.override_settings
+                    for key in ("sd_model_checkpoint", "sd_vae")
+                ),
+            )
+            if requested_size != (p2.width, p2.height):
+                print(
+                    f"[-] ADetailer: VAE-aligned inpaint size -- "
+                    f"{requested_size[0]}x{requested_size[1]} -> "
+                    f"{p2.width}x{p2.height}"
+                )
+
             p2.seed = self.get_each_tab_seed(seed, j)
             p2.subseed = self.get_each_tab_seed(subseed, j)
 
             try:
-                processed = process_images(p2)
+                # ADetailer needs ordinary inpaint, not ANIMA Edit. Its
+                # reference path can concatenate latents of different sizes.
+                with suspend_anima_reference(
+                    opts,
+                    p2.sd_model,
+                    checkpoint_override=bool(p2.override_settings.get("sd_model_checkpoint")),
+                ) as reference_suspended:
+                    if reference_suspended:
+                        print("[-] ADetailer: ANIMA Reference temporarily disabled for inpaint")
+                    processed = process_images(p2)
             except NansException as e:
                 msg = f"[-] ADetailer: 'NansException' occurred with {ordinal(n + 1)} settings.\n{e}"
                 print(msg, file=sys.stderr)
